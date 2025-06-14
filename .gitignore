@@ -3,7 +3,6 @@
 .env
 .env.local
 .env.*.local
-.env.example
 
 # Ignore Python cache and virtual environments
 __pycache__/
@@ -19,7 +18,7 @@ build/
 # Ignore macOS system files
 .DS_Store
 
-# Ignore logs
+# Ignore log files
 *.log
 
 # Ignore IDE-specific files
@@ -31,17 +30,16 @@ build/
 Thumbs.db
 desktop.ini
 
-# Ignore Git-related temporary files
-*.lock
-.git/
+# Ignore Node.js dependencies
+node_modules/
 
-# Ignore coverage and test reports
+# Ignore test coverage and reports
 coverage/
 *.cover
 *.lcov
 .nyc_output/
 
-# Ignore compiled binary files
+# Ignore compiled binaries
 *.out
 *.exe
 *.dll
@@ -49,7 +47,7 @@ coverage/
 *.a
 *.lib
 
-# Ignore temporary files
+# Ignore temporary and swap files
 *.swp
 *.swo
 *~
@@ -60,3 +58,6 @@ coverage/
 *.rar
 *.7z
 *.bz2
+
+# Ignore Git-related temporary files
+*.lock
