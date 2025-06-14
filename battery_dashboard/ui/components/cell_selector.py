@@ -439,6 +439,7 @@ class CellSelectorTab(BaseTab):
 
     def on_cell_selection(self, event):
         """Handle cell selection changes"""
+        logger.info(f"Selection updated: {len(event.new)} cells")
         selected_indices = event.new if hasattr(event, "new") else []
         self.update_selection_display(selected_indices)
 

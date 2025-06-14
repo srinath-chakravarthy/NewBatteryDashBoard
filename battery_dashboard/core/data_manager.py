@@ -170,7 +170,8 @@ class CellDataManager(param.Parameterized):
     async def load_initial_data(self, filters: Optional[Dict] = None, force_refresh: bool = False):
         """Load initial cell data with optional filters"""
         cache_key = self.cache._generate_key("cell_data", filters)
-
+        logger.info(f"Cache stats before lookup: {self.cache.get_stats()}")
+        logger.info(f"Looking for cache key: {cache_key}")
         # Check cache first
         if not force_refresh:
             cached_data = self.cache.get(cache_key, ttl=600)
@@ -194,8 +195,8 @@ class CellDataManager(param.Parameterized):
 
             if data is not None and not data.is_empty():
                 # Apply any initial filtering
-                if 'regular_cycles' in data.columns:
-                    data = data.filter(pl.col('regular_cycles') > 20)
+                if 'total_cycles' in data.columns:
+                    data = data.filter(pl.col('total_cycles') > 2)
 
                 # Cache the result
                 self.cache.put(cache_key, data, metadata={'filters': filters})
@@ -217,7 +218,9 @@ class CellDataManager(param.Parameterized):
     def _fetch_cell_data(self, filters: Optional[Dict] = None) -> pl.DataFrame:
         """Fetch cell data (blocking operation)"""
         try:
-            return get_redash_query_results(CELL_QUERY_ID)
+            result =  get_redash_query_results(CELL_QUERY_ID)
+            logger.info(f"Raw query result: {len(result)} rows, columns: {result.columns if not result.is_empty() else 'None'}")
+            return result
         except Exception as e:
             logger.error(f"Error fetching cell data: {e}")
             raise

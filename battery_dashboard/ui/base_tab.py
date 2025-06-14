@@ -30,17 +30,26 @@ class BaseTab(param.Parameterized, ABC, metaclass=ParameterizedABCMeta):
     def __init__(self, state_manager: AppStateManager, **params):
         super().__init__(**params)
         self.state_manager = state_manager
+
+        # Debug: Check if state manager has the expected parameters
+        logger.debug(f"State manager parameters: {list(self.state_manager.param)}")
+        logger.debug(f"State manager cell_data: {self.state_manager.cell_data}")
+
         self.container = pn.Column(sizing_mode="stretch_both")
         self.sidebar = pn.Column(width=300, sizing_mode="fixed")
         self.main_content = pn.Column(sizing_mode="stretch_both")
 
         # Watch state changes
-        self.state_manager.param.watch(self.on_state_change, [
-            'selected_cell_ids',
-            'selected_cell_data',
-            'cell_data',
-            'cycle_data'
-        ])
+        try:
+            self.state_manager.param.watch(self.on_state_change, [
+                'selected_cell_ids',
+                'selected_cell_data',
+                'cell_data',
+                'cycle_data'
+            ])
+            logger.debug("Successfully set up parameter watchers")
+        except Exception as e:
+            logger.error(f"Failed to set up parameter watchers: {e}")
 
         # Setup the tab
         self.setup_tab()

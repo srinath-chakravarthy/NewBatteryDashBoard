@@ -5,7 +5,7 @@ import asyncio
 from dotenv import load_dotenv
 
 # Import config
-from battery_dashboard.config import LOG_FILE, LOG_LEVEL
+from battery_dashboard.config import LOG_FILE, LOG_LEVEL, REDASH_URL, REDASH_API_KEY, CELL_QUERY_ID
 # Import core components
 from battery_dashboard.core.state_manager import app_state
 from battery_dashboard.ui.components.cell_selector import CellSelectorTab
@@ -16,9 +16,17 @@ from battery_dashboard.utils.logging import setup_logging, get_logger
 # Load environment variables
 load_dotenv()
 
+from battery_dashboard.config import REDASH_URL, REDASH_API_KEY, CELL_QUERY_ID
+
+
+
 # Setup logging
 setup_logging(LOG_LEVEL, LOG_FILE)
 logger = get_logger(__name__)
+
+logger.info(f"Config check - REDASH_URL: {REDASH_URL}")
+logger.info(f"Config check - API_KEY set: {bool(REDASH_API_KEY)}")
+logger.info(f"Config check - CELL_QUERY_ID: {CELL_QUERY_ID}")
 
 # Panel extensions
 pn.extension("plotly", "tabulator", "modal", sizing_mode="stretch_width")
@@ -74,6 +82,14 @@ class BatteryDashboard(param.Parameterized):
         except Exception as e:
             logger.error(f"Failed to schedule initialization: {e}")
             self.status_indicator.object = f"❌ Setup failed: {str(e)}"
+
+    async def _do_init(self):
+        try:
+            await app_state.initialize()
+            self.status_indicator.object = f"✅ Loaded {len(app_state.cell_data)} cells"
+        except Exception as e:
+            logger.error(f"Failed to initialize application: {e}")
+            self.status_indicator.object = f"❌ Initialization failed: {str(e)}"
 
     def _on_theme_change(self, event):
         """Handle theme change"""

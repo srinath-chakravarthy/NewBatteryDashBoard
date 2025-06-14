@@ -38,6 +38,14 @@ def setup_logging(log_level: str = "INFO", log_file: str = None) -> None:
 
 def get_logger(name: str) -> structlog.BoundLogger:
     """Get a structured logger instance"""
+    # Ensure the named logger uses the same configuration as root
+    logger = logging.getLogger(name)
+
+    # If no handlers, inherit from root
+    if not logger.handlers:
+        logger.handlers = logging.getLogger().handlers
+        logger.setLevel(logging.getLogger().level)
+
     return structlog.get_logger(name)
 
 
