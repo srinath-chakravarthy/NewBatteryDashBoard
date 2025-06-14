@@ -554,4 +554,4 @@ class CellSelectorTab(BaseTab):
             )
 
         # Schedule the async operation
-        pn.io.asyncio.run_sync(load_data)
+        pn.state.schedule_callback(load_data())

@@ -58,10 +58,9 @@ class BatteryDashboard(param.Parameterized):
     def _initialize_app(self):
         """Initialize the application asynchronously"""
         try:
-            loop = asyncio.get_event_loop()
-            asyncio.create_task(self._do_init())
-        except RuntimeError:
-            asyncio.run(self._do_init())
+            pn.state.onload(self._do_init)
+        except Exception as e:
+            logger.error(f"Failed to schedule initialization: {e}")
 
     async def _do_init(self):
         try:

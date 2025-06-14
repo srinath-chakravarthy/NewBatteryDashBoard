@@ -18,6 +18,7 @@ from enum import Enum
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import functools
+import asyncio
 
 logger = structlog.get_logger(__name__)
 
@@ -391,11 +392,16 @@ class DataCache:
     def _start_background_cleanup(self):
         """Start background cleanup task"""
         try:
-            loop = asyncio.get_event_loop()
+            # Only start if we have a running event loop
+            loop = asyncio.get_running_loop()
             self._cleanup_task = loop.create_task(self._background_cleanup())
         except RuntimeError:
-            # No event loop running, cleanup will be manual
-            pass
+            # No event loop or not running - skip background cleanup
+            self._cleanup_task = None
+            logger.debug("No event loop available, skipping background cache cleanup")
+        except Exception as e:
+            logger.warning(f"Could not start background cleanup: {e}")
+            self._cleanup_task = None
 
     async def _background_cleanup(self):
         """Background task to clean up expired entries"""
