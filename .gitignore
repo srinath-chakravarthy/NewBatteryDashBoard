@@ -1,0 +1,62 @@
+
+# Ignore environment files
+.env
+.env.local
+.env.*.local
+.env.example
+
+# Ignore Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore logs
+*.log
+
+# Ignore IDE-specific files
+.idea/
+.vscode/
+*.iml
+
+# Ignore OS generated files
+Thumbs.db
+desktop.ini
+
+# Ignore Git-related temporary files
+*.lock
+.git/
+
+# Ignore coverage and test reports
+coverage/
+*.cover
+*.lcov
+.nyc_output/
+
+# Ignore compiled binary files
+*.out
+*.exe
+*.dll
+*.so
+*.a
+*.lib
+
+# Ignore temporary files
+*.swp
+*.swo
+*~
+
+# Ignore compressed files and archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.bz2
