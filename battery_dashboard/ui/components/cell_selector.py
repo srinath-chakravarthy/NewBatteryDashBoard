@@ -85,6 +85,7 @@ class CellSelectorTab(BaseTab):
         """Handle cell data changes from state manager"""
         if cell_data is None or cell_data.is_empty():
             self.show_empty_state("No cell data available.")
+            logger.info("No cell data available.")
             return
 
         logger.info(f"Received cell data: {len(cell_data)} rows")

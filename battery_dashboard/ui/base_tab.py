@@ -38,6 +38,7 @@ class BaseTab(param.Parameterized, ABC, metaclass=ParameterizedABCMeta):
         self.state_manager.param.watch(self.on_state_change, [
             'selected_cell_ids',
             'selected_cell_data',
+            'cell_data',
             'cycle_data'
         ])
 
@@ -64,6 +65,8 @@ class BaseTab(param.Parameterized, ABC, metaclass=ParameterizedABCMeta):
         if event.name == 'selected_cell_ids':
             self.on_cell_selection_change(event.new)
         elif event.name == 'selected_cell_data':
+            self.on_cell_data_change(event.new)
+        elif event.name == 'cell_data':
             self.on_cell_data_change(event.new)
         elif event.name == 'cycle_data':
             self.on_cycle_data_change(event.new)
