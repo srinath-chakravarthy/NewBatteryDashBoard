@@ -225,3 +225,265 @@ def convert_units(value: float, from_unit: str, to_unit: str) -> float:
         return value * power_conversions[from_unit] / power_conversions[to_unit]
     else:
         raise ValueError(f"Cannot convert from {from_unit} to {to_unit}")
+
+
+def validate_numeric_columns(
+        df: Union[pl.DataFrame, pd.DataFrame],
+        columns: List[str],
+        allow_null: bool = True,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        check_infinite: bool = True,
+        check_outliers: bool = False,
+        outlier_method: str = "iqr",
+        outlier_threshold: float = 3.0
+) -> Dict[str, Any]:
+    """
+    Validate numeric columns in a DataFrame for battery analytics.
+
+    Args:
+        df: Input DataFrame (Polars or Pandas)
+        columns: List of column names to validate
+        allow_null: Whether to allow null/NaN values
+        min_value: Minimum allowed value (inclusive)
+        max_value: Maximum allowed value (inclusive)
+        check_infinite: Whether to check for infinite values
+        check_outliers: Whether to detect outliers
+        outlier_method: Method for outlier detection ('iqr', 'zscore', 'modified_zscore')
+        outlier_threshold: Threshold for outlier detection
+
+    Returns:
+        Dict with validation results including:
+        - valid: Overall validation status
+        - errors: List of validation errors
+        - warnings: List of validation warnings
+        - column_stats: Statistics for each validated column
+        - outlier_counts: Number of outliers per column (if check_outliers=True)
+    """
+    results = {
+        "valid": True,
+        "errors": [],
+        "warnings": [],
+        "column_stats": {},
+        "outlier_counts": {}
+    }
+
+    # Check if columns exist
+    missing_columns = [col for col in columns if col not in df.columns]
+    if missing_columns:
+        results["valid"] = False
+        results["errors"].append(f"Missing columns: {missing_columns}")
+        return results
+
+    for col in columns:
+        col_results = {
+            "data_type": None,
+            "null_count": 0,
+            "inf_count": 0,
+            "total_count": 0,
+            "min": None,
+            "max": None,
+            "mean": None,
+            "std": None
+        }
+
+        # Handle Polars vs Pandas differences
+        if isinstance(df, pl.DataFrame):
+            col_data = df[col]
+            col_results["total_count"] = len(col_data)
+            col_results["data_type"] = str(col_data.dtype)
+
+            # Check if column is numeric
+            if not col_data.dtype.is_numeric():
+                results["valid"] = False
+                results["errors"].append(f"Column '{col}' is not numeric (type: {col_data.dtype})")
+                continue
+
+            # Count nulls
+            col_results["null_count"] = col_data.null_count()
+
+            # Convert to numpy for calculations
+            col_array = col_data.drop_nulls().to_numpy()
+
+        else:  # pandas DataFrame
+            col_data = df[col]
+            col_results["total_count"] = len(col_data)
+            col_results["data_type"] = str(col_data.dtype)
+
+            # Check if column is numeric
+            if not pd.api.types.is_numeric_dtype(col_data):
+                results["valid"] = False
+                results["errors"].append(f"Column '{col}' is not numeric (type: {col_data.dtype})")
+                continue
+
+            # Count nulls
+            col_results["null_count"] = col_data.isnull().sum()
+
+            # Convert to numpy for calculations
+            col_array = col_data.dropna().values
+
+        # Check for null values
+        if not allow_null and col_results["null_count"] > 0:
+            results["valid"] = False
+            results["errors"].append(f"Column '{col}' contains {col_results['null_count']} null values")
+        elif col_results["null_count"] > 0:
+            results["warnings"].append(f"Column '{col}' contains {col_results['null_count']} null values")
+
+        # Skip further validation if no non-null data
+        if len(col_array) == 0:
+            results["warnings"].append(f"Column '{col}' has no non-null values")
+            results["column_stats"][col] = col_results
+            continue
+
+        # Check for infinite values
+        if check_infinite:
+            inf_mask = np.isinf(col_array)
+            col_results["inf_count"] = np.sum(inf_mask)
+
+            if col_results["inf_count"] > 0:
+                results["valid"] = False
+                results["errors"].append(f"Column '{col}' contains {col_results['inf_count']} infinite values")
+                # Remove infinite values for further calculations
+                col_array = col_array[~inf_mask]
+
+        # Skip further validation if no finite data
+        if len(col_array) == 0:
+            results["warnings"].append(f"Column '{col}' has no finite values")
+            results["column_stats"][col] = col_results
+            continue
+
+        # Calculate basic statistics
+        try:
+            col_results["min"] = float(np.min(col_array))
+            col_results["max"] = float(np.max(col_array))
+            col_results["mean"] = float(np.mean(col_array))
+            col_results["std"] = float(np.std(col_array))
+        except Exception as e:
+            results["warnings"].append(f"Could not calculate statistics for column '{col}': {str(e)}")
+
+        # Check value ranges
+        if min_value is not None and col_results["min"] < min_value:
+            results["valid"] = False
+            results["errors"].append(f"Column '{col}' has values below minimum {min_value} (min: {col_results['min']})")
+
+        if max_value is not None and col_results["max"] > max_value:
+            results["valid"] = False
+            results["errors"].append(f"Column '{col}' has values above maximum {max_value} (max: {col_results['max']})")
+
+        # Outlier detection
+        if check_outliers and len(col_array) > 3:  # Need at least 4 values for outlier detection
+            try:
+                outlier_mask = detect_outliers(col_array, method=outlier_method)
+                outlier_count = np.sum(outlier_mask)
+                results["outlier_counts"][col] = int(outlier_count)
+
+                if outlier_count > 0:
+                    outlier_percentage = (outlier_count / len(col_array)) * 100
+                    if outlier_percentage > 10:  # More than 10% outliers
+                        results["warnings"].append(
+                            f"Column '{col}' has {outlier_count} outliers ({outlier_percentage:.1f}%)"
+                        )
+                    else:
+                        results["warnings"].append(
+                            f"Column '{col}' has {outlier_count} outliers ({outlier_percentage:.1f}%)"
+                        )
+            except Exception as e:
+                results["warnings"].append(f"Could not detect outliers for column '{col}': {str(e)}")
+
+        # Battery-specific validations
+        if col.lower() in ['discharge_capacity', 'charge_capacity', 'capacity']:
+            if col_results["min"] is not None and col_results["min"] < 0:
+                results["warnings"].append(f"Column '{col}' has negative capacity values")
+
+        if col.lower() in ['coulombic_efficiency', 'efficiency']:
+            if col_results["max"] is not None and col_results["max"] > 100:
+                results["warnings"].append(f"Column '{col}' has efficiency values > 100%")
+            if col_results["min"] is not None and col_results["min"] < 0:
+                results["warnings"].append(f"Column '{col}' has negative efficiency values")
+
+        if col.lower() in ['voltage', 'cell_voltage']:
+            if col_results["min"] is not None and col_results["min"] < 0:
+                results["warnings"].append(f"Column '{col}' has negative voltage values")
+            if col_results["max"] is not None and col_results["max"] > 5:
+                results["warnings"].append(f"Column '{col}' has unusually high voltage values (>{5}V)")
+
+        if col.lower() in ['temperature']:
+            if col_results["min"] is not None and col_results["min"] < -50:
+                results["warnings"].append(f"Column '{col}' has unusually low temperature values")
+            if col_results["max"] is not None and col_results["max"] > 100:
+                results["warnings"].append(f"Column '{col}' has unusually high temperature values")
+
+        results["column_stats"][col] = col_results
+
+    return results
+
+
+def validate_battery_cycle_data(df: Union[pl.DataFrame, pd.DataFrame]) -> Dict[str, Any]:
+    """
+    Specialized validation function for battery cycle data.
+
+    Args:
+        df: DataFrame containing battery cycle data
+
+    Returns:
+        Dict with validation results
+    """
+    # Common battery cycle data columns
+    numeric_columns = []
+
+    # Check which columns exist and add to validation list
+    potential_columns = {
+        'discharge_capacity': {'min_value': 0, 'max_value': 10},  # Ah
+        'charge_capacity': {'min_value': 0, 'max_value': 10},  # Ah
+        'coulombic_efficiency': {'min_value': 0, 'max_value': 101},  # %
+        'cell_voltage': {'min_value': 0, 'max_value': 5},  # V
+        'temperature': {'min_value': -50, 'max_value': 100},  # °C
+        'regular_cycle_number': {'min_value': 0, 'max_value': 10000},
+        'cycle_time': {'min_value': 0},  # seconds/hours
+        'energy': {'min_value': 0, 'max_value': 50},  # Wh
+        'resistance': {'min_value': 0, 'max_value': 1000}  # Ohms
+    }
+
+    validation_results = {
+        "valid": True,
+        "errors": [],
+        "warnings": [],
+        "column_validations": {}
+    }
+
+    for col_name, constraints in potential_columns.items():
+        if col_name in df.columns:
+            numeric_columns.append(col_name)
+
+            # Validate individual column
+            col_validation = validate_numeric_columns(
+                df,
+                [col_name],
+                allow_null=True,
+                check_outliers=True,
+                **constraints
+            )
+
+            validation_results["column_validations"][col_name] = col_validation
+
+            # Aggregate results
+            if not col_validation["valid"]:
+                validation_results["valid"] = False
+                validation_results["errors"].extend(col_validation["errors"])
+
+            validation_results["warnings"].extend(col_validation["warnings"])
+
+    # Additional battery-specific validations
+    if 'discharge_capacity' in df.columns and 'charge_capacity' in df.columns:
+        # Check if charge capacity is generally >= discharge capacity
+        if isinstance(df, pl.DataFrame):
+            charge_discharge_ratio = (df['charge_capacity'] / df['discharge_capacity']).mean()
+        else:
+            charge_discharge_ratio = (df['charge_capacity'] / df['discharge_capacity']).mean()
+
+        if charge_discharge_ratio < 0.95:
+            validation_results["warnings"].append(
+                f"Average charge/discharge ratio is low: {charge_discharge_ratio:.3f}"
+            )
+
+    return validation_results
