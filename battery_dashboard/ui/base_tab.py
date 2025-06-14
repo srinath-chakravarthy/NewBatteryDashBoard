@@ -62,6 +62,7 @@ class BaseTab(param.Parameterized, ABC, metaclass=ParameterizedABCMeta):
 
     def on_state_change(self, event):
         """Handle global state changes. Override in subclasses if needed."""
+        logger.debug(f"BaseTab.on_state_change called: {event.name} = {type(event.new)}")
         if event.name == 'selected_cell_ids':
             self.on_cell_selection_change(event.new)
         elif event.name == 'selected_cell_data':

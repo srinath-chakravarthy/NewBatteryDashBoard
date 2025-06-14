@@ -47,7 +47,8 @@ class AppStateManager(param.Parameterized):
 
             # Load initial cell data
             cell_data = await cell_data_manager.load_initial_data()
-            self.cell_data = cell_data
+            with param.edit_constant(self):
+                self.cell_data = cell_data
 
             # Clear loading state
             self.set_loading_state("cell_data", False)

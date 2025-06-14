@@ -52,7 +52,7 @@ class BatteryDashboard(param.Parameterized):
         self.status_indicator = pn.pane.Markdown("", styles={"color": "white", "font-size": "0.9em"})
 
         # Watch app state for status updates
-        app_state.param.watch(self._update_status, ["loading_states", "error_states"])
+        app_state.param.watch(self._update_status, ["loading_states", "error_states", "cell_data"])
 
         # Initialize the application
         self._initialize_app()
@@ -60,17 +60,20 @@ class BatteryDashboard(param.Parameterized):
     def _initialize_app(self):
         """Initialize the application asynchronously"""
         try:
-            pn.state.onload(self._do_init)
+            # Use pn.state.onload to ensure proper async initialization
+            async def init_wrapper():
+                try:
+                    await self._do_init()
+                except Exception as e:
+                    logger.error(f"Initialization failed: {e}")
+                    self.status_indicator.object = f"❌ Initialization failed: {str(e)}"
+
+            # Schedule the initialization
+            pn.state.onload(init_wrapper)
+
         except Exception as e:
             logger.error(f"Failed to schedule initialization: {e}")
-
-    async def _do_init(self):
-        try:
-            await app_state.initialize()
-            self.status_indicator.object = f"✅ Loaded {len(app_state.cell_data)} cells"
-        except Exception as e:
-            logger.error(f"Failed to initialize application: {e}")
-            self.status_indicator.object = f"❌ Initialization failed: {str(e)}"
+            self.status_indicator.object = f"❌ Setup failed: {str(e)}"
 
     def _on_theme_change(self, event):
         """Handle theme change"""
