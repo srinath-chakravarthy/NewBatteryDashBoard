@@ -123,6 +123,13 @@ class CyclePlotsTab(BaseTab):
 
     def _setup_control_handlers(self):
         """Setup event handlers for controls"""
+        # Add proper checks
+        if (hasattr(self, 'settings_panel') and
+                hasattr(self.settings_panel, 'widgets') and
+                self.settings_panel.widgets):
+            for widget in self.settings_panel.widgets.values():
+                widget.param.watch(self._on_settings_change, 'value')
+
         self.plot_type_select.param.watch(self._on_plot_type_change, 'value')
         self.x_axis_select.param.watch(self._on_axis_change, 'value')
         self.y_axis_select.param.watch(self._on_axis_change, 'value')

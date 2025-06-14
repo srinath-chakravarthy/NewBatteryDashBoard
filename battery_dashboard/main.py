@@ -57,17 +57,19 @@ class BatteryDashboard(param.Parameterized):
 
     def _initialize_app(self):
         """Initialize the application asynchronously"""
+        try:
+            loop = asyncio.get_event_loop()
+            asyncio.create_task(self._do_init())
+        except RuntimeError:
+            asyncio.run(self._do_init())
 
-        async def init():
-            try:
-                await app_state.initialize()
-                self.status_indicator.object = f"✅ Loaded {len(app_state.cell_data)} cells"
-            except Exception as e:
-                logger.error(f"Failed to initialize application: {e}")
-                self.status_indicator.object = f"❌ Initialization failed: {str(e)}"
-
-        # Schedule initialization
-        pn.io.asyncio.run_sync(init)
+    async def _do_init(self):
+        try:
+            await app_state.initialize()
+            self.status_indicator.object = f"✅ Loaded {len(app_state.cell_data)} cells"
+        except Exception as e:
+            logger.error(f"Failed to initialize application: {e}")
+            self.status_indicator.object = f"❌ Initialization failed: {str(e)}"
 
     def _on_theme_change(self, event):
         """Handle theme change"""
@@ -138,7 +140,9 @@ class BatteryDashboard(param.Parameterized):
         footer = pn.Row(
             pn.pane.Markdown(
                 "**Battery Analytics Dashboard v2.0** | "
-                f"Cells: {len(app_state.cell_data) if app_state.cell_data else 0} | "
+                f"Cells: {len(app_state.cell_data) if hasattr(app_state, 'cell_data') 
+                          and app_state.cell_data is not None 
+                          and not app_state.cell_data.is_empty() else 0} | "
                 "Built with Panel + Polars + MLflow",
                 styles={"color": "#64748B", "font-size": "0.85em"}
             ),

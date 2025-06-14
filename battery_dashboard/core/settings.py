@@ -17,6 +17,11 @@ class WidgetType(Enum):
     COLOR_PICKER = "color_picker"
     DATE_PICKER = "date_picker"
     MULTI_CHOICE = "multi_choice"
+    # Fix enum values to match usage:
+    NUMERIC = "numeric"
+    MULTISELECT = "multiselect"
+    SLIDER = "slider"
+    RANGE_SLIDER = "range_slider"
 
 
 @dataclass
@@ -34,7 +39,12 @@ class SettingSpec:
     validator: Optional[Callable[[Any], Union[bool, str]]] = None
     depends_on: Optional[str] = None  # Enable/disable based on another setting
     section: str = "General"  # Group settings into sections
-    tooltip = None
+    # Add missing attributes:
+    enabled: bool = True
+    tooltip: Optional[str] = None
+    widget_kwargs: Optional[Dict[str, Any]] = None
+    min_value: Optional[float] = None  # For sliders
+    max_value: Optional[float] = None
 
     def __post_init__(self):
         if self.label is None:
@@ -89,7 +99,7 @@ class SettingsPanel:
             base_kwargs["tooltips"] = spec.tooltip
 
         # Additional custom arguments
-        if spec.base_kwargs:
+        if spec.widget_kwargs:
             # Handle 'description' for Checkbox - convert to 'name'
             if spec.widget_type == "checkbox" and "description" in spec.widget_kwargs:
                 base_kwargs["name"] = spec.widget_kwargs.pop("description")
@@ -111,12 +121,15 @@ class SettingsPanel:
                                           step=spec.step, **base_kwargs)
         elif spec.widget_type == "numeric":
             return pn.widgets.FloatInput(**base_kwargs)
-        elif spec.widget_type == "text":
+        elif spec.widget_type == "text_input":
+            if base_kwargs["value"] is not None:
+                base_kwargs["value"] = str(base_kwargs["value"])
             return pn.widgets.TextInput(**base_kwargs)
         elif spec.widget_type == "color":
             return pn.widgets.ColorPicker(**base_kwargs)
         else:
             # Default to text input for unknown types
+            base_kwargs["value"] = str(base_kwargs["value"])
             return pn.widgets.TextInput(**base_kwargs)
 
     def _setup_dependencies(self):

@@ -59,6 +59,24 @@ class CellSelectorTab(BaseTab):
     def setup_tab(self):
         """Setup tab-specific components"""
         # Initialize with loading state
+        # Missing widgets that are referenced in methods:
+        self.search_input = pn.widgets.TextInput(placeholder="Loading...")
+        self.search_button = pn.widgets.Button(name="Search", disabled=True)
+        self.clear_search_button = pn.widgets.Button(name="Clear", disabled=True)
+        self.search_info = pn.pane.Markdown("")
+
+        self.data_table = pn.widgets.Tabulator(value=pl.DataFrame().to_pandas())
+        self.column_selector = pn.widgets.MultiSelect(name="Columns", options=[])
+
+        self.selection_indicator = pn.pane.Markdown("**0** cells selected")
+        self.select_all_button = pn.widgets.Button(name="Select All", disabled=True)
+        self.clear_selection_button = pn.widgets.Button(name="Clear Selection", disabled=True)
+        self.load_button = pn.widgets.Button(name="Load Cycle Data", disabled=True)
+
+        # Already identified:
+        self.stats_content = pn.Column()
+        self.filter_widgets = {}
+
         self.show_loading("Loading cell data...")
 
         # Setup will complete when cell data is loaded via state manager
