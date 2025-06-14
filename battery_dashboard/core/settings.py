@@ -34,6 +34,7 @@ class SettingSpec:
     validator: Optional[Callable[[Any], Union[bool, str]]] = None
     depends_on: Optional[str] = None  # Enable/disable based on another setting
     section: str = "General"  # Group settings into sections
+    tooltip = None
 
     def __post_init__(self):
         if self.label is None:
@@ -80,15 +81,15 @@ class SettingsPanel:
         base_kwargs = {
             "name": spec.label,
             "value": spec.default,
-            "disabled": not spec.enabled
+            "disabled": not getattr(spec, "enabled", True)
         }
 
         # Add tooltip if provided
-        if spec.tooltip:
+        if hasattr(spec, 'tooltip') and spec.tooltip:
             base_kwargs["tooltips"] = spec.tooltip
 
         # Additional custom arguments
-        if spec.widget_kwargs:
+        if spec.base_kwargs:
             # Handle 'description' for Checkbox - convert to 'name'
             if spec.widget_type == "checkbox" and "description" in spec.widget_kwargs:
                 base_kwargs["name"] = spec.widget_kwargs.pop("description")
