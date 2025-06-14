@@ -1,7 +1,7 @@
 # battery_dashboard/ui/base_tab.py
 import panel as pn
 import param
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, ABCMeta
 from typing import Dict, Any, Optional, List
 import polars as pl
 
@@ -12,7 +12,13 @@ from ..utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-class BaseTab(param.Parameterized, ABC):
+# Create a custom metaclass that inherits from both metaclasses
+class ParameterizedABCMeta(ABCMeta, type(param.Parameterized)):
+    pass
+
+
+# Use the custom metaclass with BaseTab
+class BaseTab(param.Parameterized, ABC, metaclass=ParameterizedABCMeta):
     """Base class for all dashboard tabs providing common functionality"""
 
     # Common parameters

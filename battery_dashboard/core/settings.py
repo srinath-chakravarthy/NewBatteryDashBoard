@@ -74,75 +74,49 @@ class SettingsPanel:
                     'value'
                 )
 
-    def _create_widget(self, spec: SettingSpec) -> pn.param.Parameter:
-        """Create individual widget based on specification"""
+    def _create_widget(self, spec):
+        """Create a widget for the given setting spec"""
+        # Base kwargs from spec
         base_kwargs = {
-            'name': spec.label,
-            'value': spec.default,
-            'width': spec.width
+            "name": spec.label,
+            "value": spec.default,
+            "disabled": not spec.enabled
         }
 
-        if spec.description:
-            base_kwargs['description'] = spec.description
+        # Add tooltip if provided
+        if spec.tooltip:
+            base_kwargs["tooltips"] = spec.tooltip
 
-        if spec.widget_type == WidgetType.TEXT_INPUT:
-            return pn.widgets.TextInput(**base_kwargs)
+        # Additional custom arguments
+        if spec.widget_kwargs:
+            # Handle 'description' for Checkbox - convert to 'name'
+            if spec.widget_type == "checkbox" and "description" in spec.widget_kwargs:
+                base_kwargs["name"] = spec.widget_kwargs.pop("description")
 
-        elif spec.widget_type == WidgetType.NUMBER_INPUT:
-            kwargs = base_kwargs.copy()
-            if spec.step:
-                kwargs['step'] = spec.step
-            if spec.bounds:
-                kwargs['start'] = spec.bounds[0]
-                kwargs['end'] = spec.bounds[1]
-            return pn.widgets.NumberInput(**kwargs)
+            base_kwargs.update(spec.widget_kwargs)
 
-        elif spec.widget_type == WidgetType.SELECT:
-            if not spec.options:
-                raise ValueError(f"Select widget {spec.name} requires options")
-            return pn.widgets.Select(options=spec.options, **base_kwargs)
-
-        elif spec.widget_type == WidgetType.MULTI_SELECT:
-            if not spec.options:
-                raise ValueError(f"MultiSelect widget {spec.name} requires options")
-            return pn.widgets.MultiSelect(options=spec.options, **base_kwargs)
-
-        elif spec.widget_type == WidgetType.CHECKBOX:
+        # Create appropriate widget based on type
+        if spec.widget_type == "checkbox":
             return pn.widgets.Checkbox(**base_kwargs)
-
-        elif spec.widget_type == WidgetType.INT_SLIDER:
-            if not spec.bounds:
-                raise ValueError(f"IntSlider widget {spec.name} requires bounds")
-            kwargs = base_kwargs.copy()
-            kwargs['start'] = spec.bounds[0]
-            kwargs['end'] = spec.bounds[1]
-            if spec.step:
-                kwargs['step'] = spec.step
-            return pn.widgets.IntSlider(**kwargs)
-
-        elif spec.widget_type == WidgetType.FLOAT_SLIDER:
-            if not spec.bounds:
-                raise ValueError(f"FloatSlider widget {spec.name} requires bounds")
-            kwargs = base_kwargs.copy()
-            kwargs['start'] = spec.bounds[0]
-            kwargs['end'] = spec.bounds[1]
-            if spec.step:
-                kwargs['step'] = spec.step
-            return pn.widgets.FloatSlider(**kwargs)
-
-        elif spec.widget_type == WidgetType.COLOR_PICKER:
+        elif spec.widget_type == "select":
+            return pn.widgets.Select(options=spec.options, **base_kwargs)
+        elif spec.widget_type == "multiselect":
+            return pn.widgets.MultiSelect(options=spec.options, **base_kwargs)
+        elif spec.widget_type == "slider":
+            return pn.widgets.FloatSlider(start=spec.min_value, end=spec.max_value,
+                                          step=spec.step, **base_kwargs)
+        elif spec.widget_type == "range_slider":
+            return pn.widgets.RangeSlider(start=spec.min_value, end=spec.max_value,
+                                          step=spec.step, **base_kwargs)
+        elif spec.widget_type == "numeric":
+            return pn.widgets.FloatInput(**base_kwargs)
+        elif spec.widget_type == "text":
+            return pn.widgets.TextInput(**base_kwargs)
+        elif spec.widget_type == "color":
             return pn.widgets.ColorPicker(**base_kwargs)
-
-        elif spec.widget_type == WidgetType.DATE_PICKER:
-            return pn.widgets.DatePicker(**base_kwargs)
-
-        elif spec.widget_type == WidgetType.MULTI_CHOICE:
-            if not spec.options:
-                raise ValueError(f"MultiChoice widget {spec.name} requires options")
-            return pn.widgets.MultiChoice(options=spec.options, **base_kwargs)
-
         else:
-            raise ValueError(f"Unknown widget type: {spec.widget_type}")
+            # Default to text input for unknown types
+            return pn.widgets.TextInput(**base_kwargs)
 
     def _setup_dependencies(self):
         """Setup widget dependencies (enable/disable based on other widgets)"""
@@ -189,7 +163,7 @@ class SettingsPanel:
             if name in self.widgets:
                 self.widgets[name].value = value
 
-    def get_widget(self, name: str) -> Optional[pn.param.Parameter]:
+    def get_widget(self, name: str) -> Optional[pn.widgets.Widget]:
         """Get a specific widget by name"""
         return self.widgets.get(name)
 

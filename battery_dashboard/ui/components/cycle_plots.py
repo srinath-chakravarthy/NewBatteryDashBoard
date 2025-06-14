@@ -38,6 +38,10 @@ class CyclePlotsTab(BaseTab):
 
     def create_plot_controls(self):
         """Create basic plot control widgets"""
+
+        # Initialize settings_panel attribute
+        self.settings_panel = pn.Column(name="Plot Settings")
+
         # Get available columns (will be updated when data loads)
         available_columns = ["regular_cycle_number", "discharge_capacity", "charge_capacity",
                              "coulombic_efficiency", "energy_efficiency"]
@@ -133,9 +137,10 @@ class CyclePlotsTab(BaseTab):
         self.export_png_btn.on_click(self._export_png)
         self.export_svg_btn.on_click(self._export_svg)
 
-        # Settings panel handlers
-        for widget in self.settings_panel.widgets.values():
-            widget.param.watch(self._on_settings_change, 'value')
+        # Settings panel handlers - with a check to ensure it exists
+        if hasattr(self, 'settings_panel') and hasattr(self.settings_panel, 'widgets'):
+            for widget in self.settings_panel.widgets.values():
+                widget.param.watch(self._on_settings_change, 'value')
 
     def create_controls(self) -> pn.Column:
         """Create sidebar controls"""

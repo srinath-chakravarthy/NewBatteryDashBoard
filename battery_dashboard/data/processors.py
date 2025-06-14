@@ -15,7 +15,7 @@ import warnings
 
 from ..core.exceptions import DataProcessingError, DataValidationError
 from ..utils.decorators import timing_decorator
-from ..utils.helpers import safe_divide, validate_numeric_column
+from ..utils.helpers import safe_divide, validate_numeric_columns
 
 logger = structlog.get_logger(__name__)
 
