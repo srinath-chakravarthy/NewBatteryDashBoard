@@ -13,6 +13,7 @@ ML_CYCLE_QUERY_ID=os.getenv("ML_CYCLE_QUERY_ID", 43)
 
 # Application Configuration
 LOG_LEVEL=os.getenv("LOG_LEVEL", "INFO")
+LOG_FILE=os.getenv("LOG_FILE", "battery_dashboard.log")
 DEBUG=os.getenv("DEBUG", False)
 CACHE_TTL=os.getenv("CACHE_TTL", 300)
 MAX_CACHE_SIZE=os.getenv("MAX_CACHE_SIZE", 100)

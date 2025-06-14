@@ -4,6 +4,8 @@ import param
 import asyncio
 from dotenv import load_dotenv
 
+# Import config
+from battery_dashboard.config import LOG_FILE, LOG_LEVEL
 # Import core components
 from battery_dashboard.core.state_manager import app_state
 from battery_dashboard.ui.components.cell_selector import CellSelectorTab
@@ -15,7 +17,7 @@ from battery_dashboard.utils.logging import setup_logging, get_logger
 load_dotenv()
 
 # Setup logging
-setup_logging()
+setup_logging(LOG_LEVEL, LOG_FILE)
 logger = get_logger(__name__)
 
 # Panel extensions
